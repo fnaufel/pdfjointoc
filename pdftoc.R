@@ -1,6 +1,5 @@
-#! /usr/bin/R
-
-library(tidyverse)
+library(readr)
+library(dplyr)
 library(glue)
 
 # Read the .org file
@@ -16,8 +15,7 @@ read <- function(filename = 'toc.org') {
     trim_ws = TRUE,
   )
 
-  toc %>%
-    select(file, title)
+  select(toc, file, title)
 }
 
 # Generate entries
@@ -30,14 +28,13 @@ wrap_entries <- function(toc){
 \\includepdf[pages=-,linktodoc,linktodocfit=/Fit]{{{file}}}
 
 '
-
-  toc %>%
-    glue_data(template, sep = '\n')
+  glue_data(toc, template, sep = '\n')
 
 }
 
 preamble <- '\\documentclass{book}
-
+\\usepackage[utf8]{inputenc}
+\\usepackage[T1]{fontenc}
 \\usepackage{pdfpages}
 \\usepackage{hyperref}
 
@@ -49,13 +46,11 @@ preamble <- '\\documentclass{book}
 '
 postamble <- '\n\n\\end{document}\n'
 
-output_file <- glue('pdf_toc_{as.numeric(Sys.time())}.tex')
+output_file <- 'pdf_toc.tex'
 
 toc <- read()
 
 entries <- wrap_entries(toc)
-
-output_file
 
 cat(
   preamble,
@@ -65,8 +60,23 @@ cat(
   sep = ''
 )
 
+# invisible(
+#   readline(prompt="TOC file generated. \nPress [enter] to compile: ")
+# )
+
 Sys.sleep(1)
 
-command_line <- glue('pdflatex {output_file}')
+command_line <- 'pdflatex'
 
-system(command_line)
+system2(
+  command_line,
+  output_file
+)
+
+Sys.sleep(1)
+
+system2(
+  command_line,
+  output_file
+)
+
