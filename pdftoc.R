@@ -1,36 +1,72 @@
 library(readr)
 library(dplyr)
+library(tidyr)
 library(glue)
+library(stringr)
 
-# Read the .org file
-read <- function(filename = 'toc.org') {
 
+######### Functions
+
+escape_latex <- function(s) {
+
+  # TODO
+
+}
+
+strip_extension <- function(filename) {
+
+  return(str_remove(filename, '\\.[^.]+$'))
+
+}
+
+# Read and process the toc.txt file
+get_toc_specs <- function() {
+
+  toc_filename <- 'toc.txt'
   toc <- read_delim(
-    filename,
+    toc_filename,
     delim = '|',
     escape_backslash = FALSE,
     escape_double = FALSE,
-    col_names = c('x', 'file', 'title', 'y'),
-    col_types = 'cccc',
     trim_ws = TRUE,
+    col_names = c('filename', 'title')
   )
 
-  select(toc, file, title)
+  # Replace NAs in title column with corresponding filename
+  # (without the extension)
+  toc <- toc %>%
+    mutate(title = coalesce(title, strip_extension(filename)))
+
+  return(toc)
+
 }
 
-# Generate entries
+# Generate LaTeX code for each entry
 wrap_entries <- function(toc){
+
+  # Title string must not have unescaped LaTeX characters
+  toc <- mutate(toc, title = escape_latex(title))
 
   template <- '
 
 \\clearpage\\phantomsection
-\\addcontentsline{{toc}{{chapter}{{{title}}}
-\\includepdf[pages=-,linktodoc,linktodocfit=/Fit]{{{file}}}
+\\addcontentsline{toc}{chapter}{<title>}
+\\includepdf[pages=-,linktodoc,linktodocfit=/Fit]{<filename>}
 
 '
-  glue_data(toc, template, sep = '\n')
+  retval <- glue_data(
+    toc,
+    template,
+    sep = '\n',
+    .open = '<',
+    .close = '>'
+  )
+
+  return(retval)
 
 }
+
+####### Main
 
 preamble <- '\\documentclass{book}
 \\usepackage[utf8]{inputenc}
@@ -44,14 +80,13 @@ preamble <- '\\documentclass{book}
 
 
 '
+
 postamble <- '\n\n\\end{document}\n'
 
 output_file <- 'pdf_toc.tex'
 
-toc <- read()
-
+toc <- get_toc_specs()
 entries <- wrap_entries(toc)
-
 cat(
   preamble,
   entries,
@@ -60,21 +95,20 @@ cat(
   sep = ''
 )
 
-# invisible(
-#   readline(prompt="TOC file generated. \nPress [enter] to compile: ")
-# )
+command_line <- 'pdflatex'
 
 Sys.sleep(1)
 
-command_line <- 'pdflatex'
-
+# Compile
 system2(
   command_line,
   output_file
 )
 
+# Wait...
 Sys.sleep(1)
 
+# And compile again
 system2(
   command_line,
   output_file
