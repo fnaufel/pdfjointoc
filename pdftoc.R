@@ -5,13 +5,10 @@ library(glue)
 library(stringr)
 
 
-######### Functions
+####################################################
+# Functions
+####################################################
 
-escape_latex <- function(s) {
-
-  # TODO
-
-}
 
 strip_extension <- function(filename) {
 
@@ -19,7 +16,9 @@ strip_extension <- function(filename) {
 
 }
 
+
 # Read and process the toc.txt file
+# Return tbl
 get_toc_specs <- function() {
 
   toc_filename <- 'toc.txt'
@@ -37,11 +36,26 @@ get_toc_specs <- function() {
   toc <- toc %>%
     mutate(title = coalesce(title, strip_extension(filename)))
 
+  # return tbl
   return(toc)
 
 }
 
+
+escape_latex <- function(s) {
+
+  str_replace_all(
+    s,
+    '[_^%$]',
+    '-'
+  )
+
+}
+
+
 # Generate LaTeX code for each entry
+# Parameter is tbl
+# Returns string
 wrap_entries <- function(toc){
 
   # Title string must not have unescaped LaTeX characters
@@ -66,9 +80,13 @@ wrap_entries <- function(toc){
 
 }
 
-####### Main
 
-preamble <- '\\documentclass{book}
+# Write .tex file
+# Param is string: toc
+# Returns string: filename
+write_tex_file <- function(toc) {
+
+  preamble <- '\\documentclass{book}
 \\usepackage[utf8]{inputenc}
 \\usepackage[T1]{fontenc}
 \\usepackage{pdfpages}
@@ -81,36 +99,54 @@ preamble <- '\\documentclass{book}
 
 '
 
-postamble <- '\n\n\\end{document}\n'
+  postamble <- '\n\n\\end{document}\n'
 
-output_file <- 'pdf_toc.tex'
+  output_file <- 'pdf_toc.tex'
 
-toc <- get_toc_specs()
-entries <- wrap_entries(toc)
-cat(
-  preamble,
-  entries,
-  postamble,
-  file = output_file,
-  sep = ''
-)
+  cat(
+    preamble,
+    toc,
+    postamble,
+    file = output_file,
+    sep = ''
+  )
 
-command_line <- 'pdflatex'
+  return(output_file)
 
-Sys.sleep(1)
+}
 
-# Compile
-system2(
-  command_line,
-  output_file
-)
 
-# Wait...
-Sys.sleep(1)
+# Compile LaTeX file
+# Param: tex file name
+compile <- function(filename) {
 
-# And compile again
-system2(
-  command_line,
-  output_file
-)
+  command_line <- 'pdflatex'
 
+  Sys.sleep(1)
+
+  # Compile
+  system2(
+    command_line,
+    filename
+  )
+
+  # Wait...
+  Sys.sleep(1)
+
+  # And compile again
+  system2(
+    command_line,
+    filename
+  )
+
+}
+
+
+####################################################
+# Main
+####################################################
+
+get_toc_specs() %>%
+  wrap_entries() %>%
+  write_tex_file() %>%
+  compile()
