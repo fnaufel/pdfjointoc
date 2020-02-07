@@ -65,7 +65,7 @@ wrap_entries <- function(toc){
 
 \\clearpage\\phantomsection
 \\addcontentsline{toc}{chapter}{<title>}
-\\includepdf[pages=-,linktodoc,linktodocfit=/Fit]{<filename>}
+\\includepdf[pages=-]{<filename>}
 
 '
   retval <- glue_data(
